@@ -5,8 +5,11 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using SocksGateway.Models;
+using SocksGateway.Utils;
 
 namespace SocksGateway.Socks
 {
@@ -15,6 +18,7 @@ namespace SocksGateway.Socks
         private const byte SOCKS_VERSION = 5;
         private TcpListener _listner;
         public bool IsRunning { get; private set; }
+        public bool IsProtected { get; private set; }
 
         public SocksServer(int port)
         {
@@ -35,6 +39,19 @@ namespace SocksGateway.Socks
             }
         }
 
+        public void Start()
+        {
+            _listner.Start();
+            IsRunning = true;
+            WaitClientsTask();
+        }
+
+        public void Stop()
+        {
+            _listner.Stop();
+            IsRunning = false;
+        }
+
         private Task WaitClientsTask()
         {
             return Task.Run(() => WaitClients());
@@ -45,34 +62,18 @@ namespace SocksGateway.Socks
             ChoseAuthMerhod(client);
         }
 
-        private byte[] ChoseAuthMerhod(TcpClient client)
+        private void ChoseAuthMerhod(TcpClient client)
         {
             var clientStream = client.GetStream();
+            var authMethod = GetClientAuthMethod(clientStream);
 
-            /* Client hello (3 bytes)
-             * 1 - Version
-             * 2 - Auth method number
-             * 3 - Auth method
-             */
-            var clientBuffer = ReadClientData(clientStream, 3);
+            //if(authMethod == SocksAuthMethod.NotSupported)
+            //     do something
 
-            if (clientBuffer[0] != SOCKS_VERSION)
-                throw new Exception("Unknown protocol version.");
+            var clientResponse = SendChosenAuthMerhod(clientStream, authMethod);
+            var clientResponse2 = SendChosenAuthMerhod(clientStream, authMethod);
 
-            var authMethod = (SocksAuthMethod)clientBuffer[2];
-
-            /* Server hello (2 bytes)
-            * 1 - Version
-            * 2 - Auth method number
-            * 3 - Auth method
-            */
-            var serverAnswer = new byte[2] { SOCKS_VERSION, (byte)authMethod };
-            client.Client.Send(serverAnswer);
-
-            if (authMethod == SocksAuthMethod.NotSupported)
-                throw new Exception("Authentication method is not supported.");
-
-            return null;
+            //client.Close();
         }
 
         private byte[] AuthenticateByUsername(byte[] clientCredentials)
@@ -95,24 +96,68 @@ namespace SocksGateway.Socks
             return serverResponseBuffer;
         }
 
-        private byte[] ReadClientData(NetworkStream clientNetworkStream, int bufferSize)
+        private byte[] ReadClientData(NetworkStream clientStream, int bufferSize = 65535)
         {
             var responseBuffer = new byte[bufferSize];
-            clientNetworkStream.Read(responseBuffer, 0, bufferSize);
-            return responseBuffer;
+            var bytesReaded = clientStream.Read(responseBuffer, 0, bufferSize);
+            return responseBuffer.Take(bytesReaded).ToArray();
         }
 
-        public void Start()
+        #region Handshaking
+
+        private byte[] SendChosenAuthMerhod(NetworkStream clientStream, SocksAuthMethod authMethod)
         {
-            _listner.Start();
-            IsRunning = true;
-            WaitClientsTask();
+            /* Server send chosen auth method (2 bytes)
+            * 1 - Version
+            * 2 - Chosen auth method
+            */
+            var serverAnswer = new[] {SOCKS_VERSION, (byte) authMethod};
+            clientStream.Write(serverAnswer, 0, serverAnswer.Length);
+
+            return ReadClientData(clientStream);
         }
 
-        public void Stop()
+        private SocksAuthMethod GetClientAuthMethod(NetworkStream clientStream)
         {
-            _listner.Stop();
-            IsRunning = false;
+            /* Client hello (3 bytes)
+             * 1 - Version
+             * 2 - Auth method number
+             * 3 - Auth method
+             */
+            var clientResponse = ReadClientData(clientStream, 3);
+
+            if (clientResponse[0] != SOCKS_VERSION)
+                return SocksAuthMethod.NotSupported;
+
+            var authMethod = (SocksAuthMethod) clientResponse[2];
+
+            if (IsProtected && authMethod != SocksAuthMethod.UsernamePassword)
+                authMethod = SocksAuthMethod.NotSupported;
+
+            return authMethod;
         }
+
+        #endregion
+
+        #region Helpers
+
+        private ClientCredentials ParseClientCredentials(byte[] clientResponse)
+        {
+            /* Client credentials (2 bytes)
+            * 1 - Version
+            * 2 - Username length
+            * 3 - Username
+            * 4 - Password length
+            * 5 - Password
+            */
+            var usernameLength = Convert.ToInt32(clientResponse[1]);
+            var passwordLength = Convert.ToInt32(clientResponse[usernameLength + 2]);
+            var username = Encoding.ASCII.GetString(clientResponse, 2, usernameLength);
+            var password = Encoding.ASCII.GetString(clientResponse, usernameLength + 3, passwordLength);
+
+            return new ClientCredentials { Username = username, Password = password};
+        }
+
+        #endregion
     }
 }
