@@ -12,6 +12,8 @@ namespace SocksGateway
         static void Main(string[] args)
         {
             var server = new SocksServer(8080);
+            server.Username = "admin";
+            server.Password = "admin";
             server.Start();
 
             Console.ReadKey();

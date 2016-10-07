@@ -9,7 +9,6 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using SocksGateway.Models;
-using SocksGateway.Utils;
 
 namespace SocksGateway.Socks
 {
@@ -19,6 +18,8 @@ namespace SocksGateway.Socks
         private TcpListener _listner;
         public bool IsRunning { get; private set; }
         public bool IsProtected { get; private set; }
+        public string Username { get; set; }
+        public string Password { get; set; }
 
         public SocksServer(int port)
         {
@@ -66,14 +67,12 @@ namespace SocksGateway.Socks
         {
             var clientStream = client.GetStream();
             var authMethod = GetClientAuthMethod(clientStream);
+            var isAuthenticated = AuthenticateClient(clientStream, authMethod);
 
-            //if(authMethod == SocksAuthMethod.NotSupported)
-            //     do something
+            if (!isAuthenticated)
+                throw new Exception("Authentication failed.");
 
-            var clientResponse = SendChosenAuthMerhod(clientStream, authMethod);
-            var clientResponse2 = SendChosenAuthMerhod(clientStream, authMethod);
-
-            //client.Close();
+            var clientRequest = ReadClientData(clientStream);
         }
 
         private byte[] AuthenticateByUsername(byte[] clientCredentials)
@@ -105,7 +104,7 @@ namespace SocksGateway.Socks
 
         #region Handshaking
 
-        private byte[] SendChosenAuthMerhod(NetworkStream clientStream, SocksAuthMethod authMethod)
+        private bool AuthenticateClient(NetworkStream clientStream, SocksAuthMethod authMethod)
         {
             /* Server send chosen auth method (2 bytes)
             * 1 - Version
@@ -114,7 +113,34 @@ namespace SocksGateway.Socks
             var serverAnswer = new[] {SOCKS_VERSION, (byte) authMethod};
             clientStream.Write(serverAnswer, 0, serverAnswer.Length);
 
-            return ReadClientData(clientStream);
+            var isAuthenticated = Authenticate(clientStream, authMethod);
+
+            if (isAuthenticated)
+            {
+                /* Server authenticated response (2 bytes)
+                 * 1 - Version
+                 * 2 - IsAuthenticated (0x00 - Success)
+                 */
+                var successAuthResponse = new byte[] { SOCKS_VERSION, 0x00 };
+                clientStream.Write(successAuthResponse, 0, successAuthResponse.Length);
+            }
+
+            return isAuthenticated;
+        }
+
+        private bool AuthenticateByUsernameAndPassword(NetworkStream clientStream)
+        {
+            /* Client credentials (unknown length)
+             * 1 - Version
+             * 2 - Username length
+             * 3 - Username
+             * 4 - Password length
+             * 5 - Password
+             */
+            var clientCredsPacket = ReadClientData(clientStream);
+            var clientCreds = ParseClientCredentials(clientCredsPacket);
+
+            return (clientCreds.Username == Username && clientCreds.Password == Password);
         }
 
         private SocksAuthMethod GetClientAuthMethod(NetworkStream clientStream)
@@ -127,12 +153,12 @@ namespace SocksGateway.Socks
             var clientResponse = ReadClientData(clientStream, 3);
 
             if (clientResponse[0] != SOCKS_VERSION)
-                return SocksAuthMethod.NotSupported;
+                throw new Exception("Unknown protocol version");
 
             var authMethod = (SocksAuthMethod) clientResponse[2];
 
             if (IsProtected && authMethod != SocksAuthMethod.UsernamePassword)
-                authMethod = SocksAuthMethod.NotSupported;
+                throw new Exception("Authentication required.");
 
             return authMethod;
         }
@@ -143,19 +169,25 @@ namespace SocksGateway.Socks
 
         private ClientCredentials ParseClientCredentials(byte[] clientResponse)
         {
-            /* Client credentials (2 bytes)
-            * 1 - Version
-            * 2 - Username length
-            * 3 - Username
-            * 4 - Password length
-            * 5 - Password
-            */
             var usernameLength = Convert.ToInt32(clientResponse[1]);
             var passwordLength = Convert.ToInt32(clientResponse[usernameLength + 2]);
             var username = Encoding.ASCII.GetString(clientResponse, 2, usernameLength);
             var password = Encoding.ASCII.GetString(clientResponse, usernameLength + 3, passwordLength);
 
             return new ClientCredentials { Username = username, Password = password};
+        }
+
+        private bool Authenticate(NetworkStream clientStream, SocksAuthMethod authMethod)
+        {
+            switch (authMethod)
+            {
+                case SocksAuthMethod.NoAuth:
+                    return true;
+                case SocksAuthMethod.UsernamePassword:
+                    return AuthenticateByUsernameAndPassword(clientStream);
+                default:
+                    return false;
+            }
         }
 
         #endregion
