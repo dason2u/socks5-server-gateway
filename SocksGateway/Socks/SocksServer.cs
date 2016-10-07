@@ -72,34 +72,7 @@ namespace SocksGateway.Socks
             if (!isAuthenticated)
                 throw new Exception("Authentication failed.");
 
-            var clientRequest = ReadClientData(clientStream);
-        }
-
-        private byte[] AuthenticateByUsername(byte[] clientCredentials)
-        {
-            const int usernameStartPosition = 2;
-            var usernameLength = clientCredentials[1];
-            var usernameBytes = clientCredentials.Skip(usernameStartPosition).Take(usernameLength);
-            var username = Encoding.UTF8.GetString(usernameBytes.ToArray());
-
-
-            var passwordStartPosition = (usernameLength + usernameStartPosition) + 1;
-            var passwordLength = clientCredentials[passwordStartPosition - 1];
-            var passwordBytes = clientCredentials.Skip(passwordStartPosition).Take(passwordLength);
-            var password = Encoding.UTF8.GetString(passwordBytes.ToArray());
-
-            var serverResponseBuffer = new byte[2] { clientCredentials[0], 0 };
-            if (username != Configuration.Username || password != Configuration.Password)
-                serverResponseBuffer[1] = 0XFF;
-
-            return serverResponseBuffer;
-        }
-
-        private byte[] ReadClientData(NetworkStream clientStream, int bufferSize = 65535)
-        {
-            var responseBuffer = new byte[bufferSize];
-            var bytesReaded = clientStream.Read(responseBuffer, 0, bufferSize);
-            return responseBuffer.Take(bytesReaded).ToArray();
+            var clientAddress = GetClientRequestInfo(clientStream);
         }
 
         #region Handshaking
@@ -110,7 +83,7 @@ namespace SocksGateway.Socks
             * 1 - Version
             * 2 - Chosen auth method
             */
-            var serverAnswer = new[] {SOCKS_VERSION, (byte) authMethod};
+            var serverAnswer = new[] { SOCKS_VERSION, (byte)authMethod };
             clientStream.Write(serverAnswer, 0, serverAnswer.Length);
 
             var isAuthenticated = Authenticate(clientStream, authMethod);
@@ -155,12 +128,31 @@ namespace SocksGateway.Socks
             if (clientResponse[0] != SOCKS_VERSION)
                 throw new Exception("Unknown protocol version");
 
-            var authMethod = (SocksAuthMethod) clientResponse[2];
+            var authMethod = (SocksAuthMethod)clientResponse[2];
 
             if (IsProtected && authMethod != SocksAuthMethod.UsernamePassword)
                 throw new Exception("Authentication required.");
 
             return authMethod;
+        }
+
+        private ClientRequestInfo GetClientRequestInfo(NetworkStream clientStream)
+        {
+            /* Client request info (unknown length)
+             * 1 - Version
+             * 2 - Command
+             * 3 - Reserved (0x00)
+             * 4 - Address type
+             * 5 - Destination address
+             * 6 - Destination port
+             */
+            var clientBytes = ReadClientData(clientStream);
+
+            if (clientBytes[1] != 1)
+                throw new Exception("Unsupported request command.");
+
+            var address = ParseRequestAddress(clientBytes);
+            return null;
         }
 
         #endregion
@@ -174,7 +166,35 @@ namespace SocksGateway.Socks
             var username = Encoding.ASCII.GetString(clientResponse, 2, usernameLength);
             var password = Encoding.ASCII.GetString(clientResponse, usernameLength + 3, passwordLength);
 
-            return new ClientCredentials { Username = username, Password = password};
+            return new ClientCredentials { Username = username, Password = password };
+        }
+
+        private string ParseRequestAddress(byte[] clientResponse)
+        {
+            var addressType = (AddressType)clientResponse[3];
+
+            string address;
+            int portStartPosition = 4;
+            switch (addressType)
+            {
+                case AddressType.IPv4:
+                    var ipAddressBytes = clientResponse.Skip(4).Take(4).ToArray();
+                    address = new IPAddress(ipAddressBytes).ToString();
+                    portStartPosition += 4; //IP address length
+                    break;
+                case AddressType.Domain:
+                    int domainLength = Convert.ToInt32(clientResponse[4]);
+                    address = Encoding.ASCII.GetString(clientResponse, 5, domainLength);
+                    portStartPosition += domainLength + 1; //Domain data plus domain length element
+                    break;
+                default:
+                    throw new Exception("Unknown address type.");
+            }
+
+            //var port = clientResponse.Take(clientResponse.Length - 2).ToArray();
+            var port = BitConverter.ToInt32(clientResponse, clientResponse.Length - 3);
+            //if(port < 1 || port > 65535)
+            return address;
         }
 
         private bool Authenticate(NetworkStream clientStream, SocksAuthMethod authMethod)
@@ -188,6 +208,13 @@ namespace SocksGateway.Socks
                 default:
                     return false;
             }
+        }
+
+        private byte[] ReadClientData(NetworkStream clientStream, int bufferSize = 65535)
+        {
+            var responseBuffer = new byte[bufferSize];
+            var bytesReaded = clientStream.Read(responseBuffer, 0, bufferSize);
+            return responseBuffer.Take(bytesReaded).ToArray();
         }
 
         #endregion
