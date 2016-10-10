@@ -1,5 +1,6 @@
 ﻿using System;
 using SocksGateway.Socks;
+using SocksGateway.Socks.Enums;
 
 namespace SocksGateway
 {
@@ -15,6 +16,8 @@ namespace SocksGateway
             };
             server.Start();
 
+            //var client = new SocksClient("39.1.42.161", 1080);
+            //client.SendAuthMethod(AuthMethod.NoAuth);
             Console.ReadKey();
         }
     }

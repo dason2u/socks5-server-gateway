@@ -1,4 +1,5 @@
-﻿using System.Net.Sockets;
+﻿using System;
+using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
 using SocksGateway.Socks.Enums;
@@ -62,19 +63,16 @@ namespace SocksGateway.Socks
             if (authenticated)
             {
                 var clientRequestInfo = SocksServerHelper.GetClientRequestInfo(clientStream);
-
-
                 clientRequestInfo.OriginalRequest[1] = 0x00;
-
                 clientStream.Write(clientRequestInfo.OriginalRequest, 0, clientRequestInfo.OriginalRequest.Length);
 
-
+                var random = new Random();
                 var message = Encoding.UTF8.GetBytes(@"HTTP/1.1 200 OK
 Content-Type: text/html; charset=utf-8
 Connection: close
 Content-Length: 15
 
-SOSI PISOS DURA");
+SOSI PISOS DUR" + random.Next(100));
                 //if(client.Connected)
                 clientStream.Write(message, 0, message.Length);
             }
