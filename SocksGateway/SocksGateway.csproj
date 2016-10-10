@@ -53,8 +53,7 @@
     <Compile Include="Socks\Enums\AuthMethod.cs" />
     <Compile Include="Socks\Enums\ProtocolVersion.cs" />
     <Compile Include="Socks\SocksServer.cs" />
-    <Compile Include="Socks\SocksClientHelper.cs" />
-    <Compile Include="Utils\SocketClient.cs" />
+    <Compile Include="Socks\SocksServerHelper.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
