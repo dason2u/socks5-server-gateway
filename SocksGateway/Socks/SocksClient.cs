@@ -47,6 +47,8 @@ namespace SocksGateway.Socks
                 throw new Exception("Authentication method not supported.");
         }
 
+
+
         #region Helpers
 
         private void SendData(byte[] data)
