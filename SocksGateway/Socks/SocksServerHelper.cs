@@ -12,19 +12,19 @@ namespace SocksGateway.Socks
     {
         public static AuthMethod ChoseAuthMethod(NetworkStream clientStream)
         {
-           /* Client hello (3 bytes)
-            * 1 - Version
-            * 2 - Auth method number
-            * 3 - Auth method
-            */
+            /* Client hello (3 bytes)
+             * 1 - Version
+             * 2 - Auth method number
+             * 3 - Auth method
+             */
             var clientResponse = ReadClientData(clientStream, 3);
 
-            if (clientResponse[0] != (byte)ProtocolVersion.V5)
+            if (clientResponse[0] != (byte) ProtocolVersion.V5)
                 throw new Exception("Unknown protocol version");
 
             var authMethod = (AuthMethod) clientResponse[2];
 
-            if (!Enum.IsDefined(typeof (AuthMethod), authMethod))
+            if (!Enum.IsDefined(typeof(AuthMethod), authMethod))
                 authMethod = AuthMethod.NotSupported;
 
             return authMethod;
@@ -36,7 +36,7 @@ namespace SocksGateway.Socks
             * 1 - Version
             * 2 - Chosen auth method
             */
-            var serverData = new[] { (byte)ProtocolVersion.V5, (byte)authMethod };
+            var serverData = new[] {(byte) ProtocolVersion.V5, (byte) authMethod};
             SendClientData(clientStream, serverData);
         }
 
@@ -59,7 +59,7 @@ namespace SocksGateway.Socks
             * 1 - Version
             * 2 - IsAuthenticated (0x00 - Success)
             */
-            var serverData = new byte[] { (byte)ProtocolVersion.V5, 0x00 };
+            var serverData = new byte[] {(byte) ProtocolVersion.V5, 0x00};
             if (!isValid)
                 serverData[1] = 0xFF;
             SendClientData(clientStream, serverData);
@@ -92,12 +92,12 @@ namespace SocksGateway.Socks
             var username = Encoding.ASCII.GetString(clientResponse, 2, usernameLength);
             var password = Encoding.ASCII.GetString(clientResponse, usernameLength + 3, passwordLength);
 
-            return new ClientCredentials { Username = username, Password = password };
+            return new ClientCredentials {Username = username, Password = password};
         }
 
         private static SocksRequestInfo ParseHostInfo(byte[] clientResponse)
         {
-            var addressType = (AddressType)clientResponse[3];
+            var addressType = (AddressType) clientResponse[3];
 
             string address;
             switch (addressType)
@@ -115,10 +115,10 @@ namespace SocksGateway.Socks
             }
 
             //Little endian byte port to int
-            var portBuffer = new[] { clientResponse.Last(), clientResponse[clientResponse.Length - 2] };
+            var portBuffer = new[] {clientResponse.Last(), clientResponse[clientResponse.Length - 2]};
             var port = BitConverter.ToUInt16(portBuffer, 0);
 
-            return new SocksRequestInfo { Address = address, Port = port, OriginalRequest = clientResponse };
+            return new SocksRequestInfo {Address = address, Port = port, OriginalRequest = clientResponse};
         }
 
         private static void SendClientData(NetworkStream clientStream, byte[] data)

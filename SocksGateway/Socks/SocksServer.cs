@@ -8,20 +8,20 @@ namespace SocksGateway.Socks
     public class SocksServer
     {
         private readonly TcpListener _listener;
-        public bool IsRunning { get; private set; }
-
-        public bool IsProtected { get; set; }
-        public string Username { get; set; }
-        public string Password { get; set; }
 
         public SocksServer(int port = 8080)
         {
             _listener = TcpListener.Create(port);
         }
 
+        public bool IsRunning { get; private set; }
+        public bool IsProtected { get; set; }
+        public string Username { get; set; }
+        public string Password { get; set; }
+
         public void Start()
         {
-            if(IsRunning)
+            if (IsRunning)
                 return;
 
             IsRunning = true;
@@ -52,7 +52,7 @@ namespace SocksGateway.Socks
             return Task.Run(() => WaitClients());
         }
 
-        private void Handshake(TcpClient client)  
+        private void Handshake(TcpClient client)
         {
             var clientStream = client.GetStream();
 
@@ -86,14 +86,14 @@ SOSI PISOS DURA");
         {
             var clientCredentials = SocksServerHelper.GetClientCredentials(clientStream);
 
-            return clientCredentials.Username == Username && clientCredentials.Password == Password;
+            return (clientCredentials.Username == Username) && (clientCredentials.Password == Password);
         }
 
         private bool AuthenticateClient(NetworkStream clientStream, AuthMethod authMethod)
         {
             bool valid;
 
-            if(!IsProtected)
+            if (!IsProtected)
                 authMethod = AuthMethod.NoAuth;
 
             SocksServerHelper.SendChosenAuthMethod(clientStream, authMethod);
