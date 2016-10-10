@@ -1,9 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net.Sockets;
-using System.Text;
-using System.Threading.Tasks;
 using SocksGateway.Socks.Enums;
 
 namespace SocksGateway.Socks.Helpers
@@ -17,7 +13,7 @@ namespace SocksGateway.Socks.Helpers
              * 2 - Auth method number
              * 3 - Auth method
              */
-            var clientData = new byte[] { (byte)ProtocolVersion.V5, 0x01, (byte)authMethod };
+            var clientData = new byte[] {(byte) ProtocolVersion.V5, 0x01, (byte) authMethod};
             clientStream.WriteAllData(clientData);
 
             /* Server response chosen auth method (2 bytes)
@@ -27,7 +23,7 @@ namespace SocksGateway.Socks.Helpers
             var serverResponse = clientStream.ReadDataChunk(2);
             var serverAuthMethod = serverResponse[1];
 
-            if (serverAuthMethod != (byte)authMethod || serverAuthMethod == (byte)AuthMethod.NotSupported)
+            if (serverAuthMethod != (byte) authMethod || serverAuthMethod == (byte) AuthMethod.NotSupported)
                 throw new Exception("Authentication method not supported.");
         }
     }

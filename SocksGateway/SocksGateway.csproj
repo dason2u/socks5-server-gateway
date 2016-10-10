@@ -49,6 +49,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Configuration.cs" />
+    <Compile Include="Extensions.cs" />
     <Compile Include="Models\ClientCredentials.cs" />
     <Compile Include="Models\SocksRequestInfo.cs" />
     <Compile Include="Program.cs" />
@@ -58,9 +59,10 @@
     <Compile Include="Socks\Enums\ProtocolVersion.cs" />
     <Compile Include="Socks\Events\SocksClientArgs.cs" />
     <Compile Include="Socks\Events\SocksErrorArgs.cs" />
+    <Compile Include="Socks\Helpers\SocksClientHelpers.cs" />
     <Compile Include="Socks\SocksClient.cs" />
     <Compile Include="Socks\SocksServer.cs" />
-    <Compile Include="Socks\SocksServerHelpers.cs" />
+    <Compile Include="Socks\Helpers\SocksServerHelpers.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
