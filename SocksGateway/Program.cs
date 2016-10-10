@@ -19,7 +19,7 @@ namespace SocksGateway
         {
             var server = new SocksServer
             {
-                Username = "admins",
+                Username = "admin",
                 Password = "admin",
                 IsProtected = isProtected
             };

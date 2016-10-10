@@ -5,9 +5,6 @@ namespace SocksGateway.Socks.Events
 {
     public class SocksErrorArgs : EventArgs
     {
-        public TcpClient Client { get; }
-        public Exception Exception { get; }
-
         public SocksErrorArgs(TcpClient client, Exception exception)
         {
             if (exception == null)
@@ -16,5 +13,8 @@ namespace SocksGateway.Socks.Events
             Client = client;
             Exception = exception;
         }
+
+        public TcpClient Client { get; }
+        public Exception Exception { get; }
     }
 }

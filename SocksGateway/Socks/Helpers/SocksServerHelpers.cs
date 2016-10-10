@@ -6,7 +6,7 @@ using System.Text;
 using SocksGateway.Models;
 using SocksGateway.Socks.Enums;
 
-namespace SocksGateway.Socks
+namespace SocksGateway.Socks.Helpers
 {
     public static class SocksServerHelpers
     {
@@ -17,7 +17,7 @@ namespace SocksGateway.Socks
              * 2 - Auth method number
              * 3 - Auth method
              */
-            var clientResponse = ReadClientData(clientStream, 3);
+            var clientResponse = clientStream.ReadDataChunk(3);
 
             if (clientResponse[0] != (byte) ProtocolVersion.V5)
                 throw new Exception("Unknown protocol version");
@@ -37,7 +37,7 @@ namespace SocksGateway.Socks
             * 2 - Chosen auth method
             */
             var serverData = new[] {(byte) ProtocolVersion.V5, (byte) authMethod};
-            SendClientData(clientStream, serverData);
+            clientStream.WriteAllData(serverData);
         }
 
         public static ClientCredentials GetClientCredentials(NetworkStream clientStream)
@@ -49,7 +49,7 @@ namespace SocksGateway.Socks
             * 4 - Password length
             * 5 - Password
             */
-            var clientResponse = ReadClientData(clientStream, 65536);
+            var clientResponse = clientStream.ReadDataChunk(8192);
             return ParseClientCredentials(clientResponse);
         }
 
@@ -62,7 +62,8 @@ namespace SocksGateway.Socks
             var serverData = new byte[] {(byte) ProtocolVersion.V5, 0x00};
             if (!authenticated)
                 serverData[1] = 0xFF;
-            SendClientData(clientStream, serverData);
+
+            clientStream.WriteAllData(serverData);
         }
 
         public static SocksRequestInfo GetClientRequestInfo(NetworkStream clientStream)
@@ -75,7 +76,7 @@ namespace SocksGateway.Socks
              * 5 - Destination address
              * 6 - Destination port
              */
-            var clientResponse = ReadClientData(clientStream);
+            var clientResponse = clientStream.ReadDataChunk();
 
             if (clientResponse[1] != 1)
                 throw new Exception("Unsupported request command.");
@@ -119,18 +120,6 @@ namespace SocksGateway.Socks
             var port = BitConverter.ToUInt16(portBuffer, 0);
 
             return new SocksRequestInfo {Address = address, Port = port, OriginalRequest = clientResponse};
-        }
-
-        private static void SendClientData(NetworkStream clientStream, byte[] data)
-        {
-            clientStream.Write(data, 0, data.Length);
-        }
-
-        private static byte[] ReadClientData(NetworkStream clientStream, int bufferSize = 2048)
-        {
-            var buffer = new byte[bufferSize];
-            var received = clientStream.Read(buffer, 0, bufferSize);
-            return buffer.Take(received).ToArray();
         }
 
         #endregion

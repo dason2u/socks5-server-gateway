@@ -3,6 +3,7 @@ using System.Net.Sockets;
 using System.Threading.Tasks;
 using SocksGateway.Socks.Enums;
 using SocksGateway.Socks.Events;
+using SocksGateway.Socks.Helpers;
 
 namespace SocksGateway.Socks
 {
@@ -79,7 +80,7 @@ namespace SocksGateway.Socks
             var authMethod = SocksServerHelpers.GetAuthMethod(clientStream);
             var authenticated = AuthenticateClient(clientStream, authMethod);
 
-            if(!authenticated)
+            if (!authenticated)
                 throw new Exception("Authentication error.");
 
             OnClientAuthorized(this, new SocksClientArgs(client));
