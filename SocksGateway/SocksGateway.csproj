@@ -33,6 +33,10 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="log4net, Version=1.2.15.0, Culture=neutral, PublicKeyToken=669e0ddf0bb1aa2a, processorArchitecture=MSIL">
+      <HintPath>..\packages\log4net.2.0.5\lib\net45-full\log4net.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
@@ -52,12 +56,15 @@
     <Compile Include="Socks\Enums\AddressType.cs" />
     <Compile Include="Socks\Enums\AuthMethod.cs" />
     <Compile Include="Socks\Enums\ProtocolVersion.cs" />
+    <Compile Include="Socks\Events\SocksClientArgs.cs" />
+    <Compile Include="Socks\Events\SocksErrorArgs.cs" />
     <Compile Include="Socks\SocksClient.cs" />
     <Compile Include="Socks\SocksServer.cs" />
-    <Compile Include="Socks\SocksServerHelper.cs" />
+    <Compile Include="Socks\SocksServerHelpers.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

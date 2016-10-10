@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading.Tasks;
 using SocksGateway.Socks.Enums;
+using SocksGateway.Socks.Events;
 
 namespace SocksGateway.Socks
 {
@@ -19,6 +19,10 @@ namespace SocksGateway.Socks
         public bool IsProtected { get; set; }
         public string Username { get; set; }
         public string Password { get; set; }
+        public event EventHandler<SocksErrorArgs> OnError = delegate { };
+        public event EventHandler<SocksClientArgs> OnClientConnected = delegate { };
+        public event EventHandler<SocksClientArgs> OnClientAuthorized = delegate { };
+        public event EventHandler<SocksClientArgs> OnClientDisconnected = delegate { };
 
         public void Start()
         {
@@ -43,8 +47,23 @@ namespace SocksGateway.Socks
         {
             while (IsRunning)
             {
-                var client = await _listener.AcceptTcpClientAsync();
-                Handshake(client);
+                TcpClient client = null;
+                try
+                {
+                    client = await _listener.AcceptTcpClientAsync();
+                    OnClientConnected(this, new SocksClientArgs(client));
+                    Handshake(client);
+                }
+                catch (Exception e)
+                {
+                    OnError(this, new SocksErrorArgs(client, e));
+
+                    if (client != null)
+                    {
+                        client.Dispose();
+                        OnClientDisconnected(this, new SocksClientArgs(client));
+                    }
+                }
             }
         }
 
@@ -57,34 +76,13 @@ namespace SocksGateway.Socks
         {
             var clientStream = client.GetStream();
 
-            var authMethod = SocksServerHelper.ChoseAuthMethod(clientStream);
+            var authMethod = SocksServerHelpers.GetAuthMethod(clientStream);
             var authenticated = AuthenticateClient(clientStream, authMethod);
 
-            if (authenticated)
-            {
-                var clientRequestInfo = SocksServerHelper.GetClientRequestInfo(clientStream);
-                clientRequestInfo.OriginalRequest[1] = 0x00;
-                clientStream.Write(clientRequestInfo.OriginalRequest, 0, clientRequestInfo.OriginalRequest.Length);
+            if(!authenticated)
+                throw new Exception("Authentication error.");
 
-                var random = new Random();
-                var message = Encoding.UTF8.GetBytes(@"HTTP/1.1 200 OK
-Content-Type: text/html; charset=utf-8
-Connection: close
-Content-Length: 15
-
-SOSI PISOS DUR" + random.Next(100));
-                //if(client.Connected)
-                clientStream.Write(message, 0, message.Length);
-            }
-        }
-
-        #region Helpers
-
-        private bool AuthenticateByUsernamePassword(NetworkStream clientStream)
-        {
-            var clientCredentials = SocksServerHelper.GetClientCredentials(clientStream);
-
-            return (clientCredentials.Username == Username) && (clientCredentials.Password == Password);
+            OnClientAuthorized(this, new SocksClientArgs(client));
         }
 
         private bool AuthenticateClient(NetworkStream clientStream, AuthMethod authMethod)
@@ -94,7 +92,7 @@ SOSI PISOS DUR" + random.Next(100));
             if (!IsProtected)
                 authMethod = AuthMethod.NoAuth;
 
-            SocksServerHelper.SendChosenAuthMethod(clientStream, authMethod);
+            SocksServerHelpers.SendChosenAuthMethod(clientStream, authMethod);
 
             switch (authMethod)
             {
@@ -109,8 +107,16 @@ SOSI PISOS DUR" + random.Next(100));
                     break;
             }
 
-            SocksServerHelper.SendAuthResult(clientStream, valid);
+            SocksServerHelpers.SendAuthResult(clientStream, valid);
             return valid;
+        }
+
+        #region Authentication Methods
+
+        private bool AuthenticateByUsernamePassword(NetworkStream clientStream)
+        {
+            var clientCredentials = SocksServerHelpers.GetClientCredentials(clientStream);
+            return (clientCredentials.Username == Username) && (clientCredentials.Password == Password);
         }
 
         #endregion

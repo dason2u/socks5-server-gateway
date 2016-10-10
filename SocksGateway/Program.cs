@@ -1,6 +1,6 @@
 ﻿using System;
 using SocksGateway.Socks;
-using SocksGateway.Socks.Enums;
+using SocksGateway.Socks.Events;
 
 namespace SocksGateway
 {
@@ -8,17 +8,46 @@ namespace SocksGateway
     {
         private static void Main(string[] args)
         {
-            var server = new SocksServer
-            {
-                Username = "admin",
-                Password = "admin",
-                IsProtected = true
-            };
-            server.Start();
+            RunSocksServer(true);
 
-            //var client = new SocksClient("39.1.42.161", 1080);
-            //client.SendAuthMethod(AuthMethod.NoAuth);
             Console.ReadKey();
         }
+
+        #region Socks Gateway
+
+        private static void RunSocksServer(bool isProtected)
+        {
+            var server = new SocksServer
+            {
+                Username = "admins",
+                Password = "admin",
+                IsProtected = isProtected
+            };
+
+            server.OnClientAuthorized += OnSocksClientAuthorized;
+            server.OnClientConnected += OnSocksClientConnected;
+            server.OnClientDisconnected += OnSocksClientDisconnected;
+            server.OnError += OnSocksServerError;
+
+            server.Start();
+        }
+
+        private static void OnSocksClientDisconnected(object sender, SocksClientArgs e)
+        {
+        }
+
+        private static void OnSocksClientConnected(object sender, SocksClientArgs e)
+        {
+        }
+
+        private static void OnSocksClientAuthorized(object sender, SocksClientArgs e)
+        {
+        }
+
+        private static void OnSocksServerError(object sender, SocksErrorArgs e)
+        {
+        }
+
+        #endregion
     }
 }

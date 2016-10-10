@@ -8,9 +8,9 @@ using SocksGateway.Socks.Enums;
 
 namespace SocksGateway.Socks
 {
-    public static class SocksServerHelper
+    public static class SocksServerHelpers
     {
-        public static AuthMethod ChoseAuthMethod(NetworkStream clientStream)
+        public static AuthMethod GetAuthMethod(NetworkStream clientStream)
         {
             /* Client hello (3 bytes)
              * 1 - Version
@@ -24,8 +24,8 @@ namespace SocksGateway.Socks
 
             var authMethod = (AuthMethod) clientResponse[2];
 
-            if (!Enum.IsDefined(typeof(AuthMethod), authMethod))
-                authMethod = AuthMethod.NotSupported;
+            if (!Enum.IsDefined(typeof (AuthMethod), authMethod) || authMethod == AuthMethod.NotSupported)
+                throw new Exception("Authentication method is not supported.");
 
             return authMethod;
         }
@@ -53,14 +53,14 @@ namespace SocksGateway.Socks
             return ParseClientCredentials(clientResponse);
         }
 
-        public static void SendAuthResult(NetworkStream clientStream, bool isValid)
+        public static void SendAuthResult(NetworkStream clientStream, bool authenticated)
         {
             /* Server authenticated response (2 bytes)
             * 1 - Version
             * 2 - IsAuthenticated (0x00 - Success)
             */
             var serverData = new byte[] {(byte) ProtocolVersion.V5, 0x00};
-            if (!isValid)
+            if (!authenticated)
                 serverData[1] = 0xFF;
             SendClientData(clientStream, serverData);
         }
