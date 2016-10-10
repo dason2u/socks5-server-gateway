@@ -1,6 +1,6 @@
 ﻿namespace SocksGateway.Socks.Enums
 {
-    public enum SocksAuthMethod
+    public enum AuthMethod
     {
         NoAuth = 0,
         UsernamePassword = 2,
