@@ -1,4 +1,5 @@
 ﻿using System;
+using SocksGateway.Models;
 using SocksGateway.Socks;
 using SocksGateway.Socks.Events;
 
@@ -8,10 +9,22 @@ namespace SocksGateway
     {
         private static void Main(string[] args)
         {
-            RunSocksServer(true);
+            //RunSocksServer(true);
+            ClientRequest("127.0.0.1", 1080);
 
             Console.ReadKey();
         }
+
+        #region Socks Client
+
+        private static void ClientRequest(string host, int port)
+        {
+            var socksClient = new SocksClient();
+            socksClient.ClientCredentials = new ClientCredentials { Username = "admin", Password = "admin"};
+            socksClient.Connect(host, port);
+        }
+
+        #endregion
 
         #region Socks Gateway
 
@@ -21,7 +34,7 @@ namespace SocksGateway
             {
                 Username = "admin",
                 Password = "admin",
-                IsProtected = isProtected
+                IsSecured = isProtected
             };
 
             server.OnClientAuthorized += OnSocksClientAuthorized;

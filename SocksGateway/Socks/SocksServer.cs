@@ -17,7 +17,7 @@ namespace SocksGateway.Socks
         }
 
         public bool IsRunning { get; private set; }
-        public bool IsProtected { get; set; }
+        public bool IsSecured { get; set; }
         public string Username { get; set; }
         public string Password { get; set; }
         public event EventHandler<SocksErrorArgs> OnError = delegate { };
@@ -53,7 +53,7 @@ namespace SocksGateway.Socks
                 {
                     client = await _listener.AcceptTcpClientAsync();
                     OnClientConnected(this, new SocksClientArgs(client));
-                    Handshake(client);
+                    HandshakeTask(client);
                 }
                 catch (Exception e)
                 {
@@ -73,6 +73,11 @@ namespace SocksGateway.Socks
             return Task.Run(() => WaitClients());
         }
 
+        private Task HandshakeTask(TcpClient client)
+        {
+             return Task.Run(() => Handshake(client));
+        }
+
         private void Handshake(TcpClient client)
         {
             var clientStream = client.GetStream();
@@ -90,7 +95,7 @@ namespace SocksGateway.Socks
         {
             bool valid;
 
-            if (!IsProtected)
+            if (!IsSecured)
                 authMethod = AuthMethod.NoAuth;
 
             SocksServerHelpers.SendChosenAuthMethod(clientStream, authMethod);

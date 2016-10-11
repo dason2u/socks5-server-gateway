@@ -43,7 +43,7 @@ namespace SocksGateway.Socks.Helpers
         public static ClientCredentials GetClientCredentials(NetworkStream clientStream)
         {
             /* Client credentials (unknown length)
-            * 1 - Version
+            * 1 - Auth method version
             * 2 - Username length
             * 3 - Username
             * 4 - Password length

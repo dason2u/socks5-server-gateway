@@ -1,6 +1,7 @@
 ﻿using System.Net.Sockets;
 using SocksGateway.Models;
 using SocksGateway.Socks.Enums;
+using SocksGateway.Socks.Helpers;
 
 namespace SocksGateway.Socks
 {
@@ -8,6 +9,8 @@ namespace SocksGateway.Socks
     {
         private readonly TcpClient _client;
         private NetworkStream _clientStream;
+
+        public ClientCredentials ClientCredentials { get; set; }
 
         public SocksClient()
         {
@@ -18,6 +21,8 @@ namespace SocksGateway.Socks
         {
             _client.Connect(host, port);
             _clientStream = _client.GetStream();
+
+            Handshake();
         }
 
         public void Disconnect()
@@ -25,10 +30,25 @@ namespace SocksGateway.Socks
             _client.Client.Disconnect(true);
         }
 
-        private void Handshake(ClientCredentials credentials)
+        private void Handshake()
         {
-            var authMethod = AuthMethod.NoAuth;
-            SendAuthMethod(authMethod);
+            Authentication();
+            SocksClientHelpers.SendRequest(_clientStream, "www.google.com", 80);
+
+            var data = _clientStream.ReadDataChunk();
+        }
+
+        private void Authentication()
+        {
+            if (ClientCredentials == null)
+            {
+                SocksClientHelpers.SendAuthMethod(_clientStream, AuthMethod.NoAuth);
+            }
+            else
+            {
+                SocksClientHelpers.SendAuthMethod(_clientStream, AuthMethod.UsernamePassword);
+                SocksClientHelpers.SendAuthCredentials(_clientStream, ClientCredentials);
+            }
         }
     }
 }
