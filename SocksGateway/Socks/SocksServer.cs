@@ -20,10 +20,9 @@ namespace SocksGateway.Socks
         public bool IsSecured { get; set; }
         public string Username { get; set; }
         public string Password { get; set; }
-        public event EventHandler<SocksErrorArgs> OnError = delegate { };
-        public event EventHandler<SocksClientArgs> OnClientConnected = delegate { };
+        public event EventHandler<SocksServerErrorArgs> OnServerError = delegate { };
+        public event EventHandler<SocksErrorArgs> OnHandshakeError = delegate { };
         public event EventHandler<SocksClientArgs> OnClientAuthorized = delegate { };
-        public event EventHandler<SocksClientArgs> OnClientDisconnected = delegate { };
 
         public void Start()
         {
@@ -44,38 +43,42 @@ namespace SocksGateway.Socks
             _listener.Stop();
         }
 
-        private async void WaitClients()
-        {
-            while (IsRunning)
-            {
-                TcpClient client = null;
-                try
-                {
-                    client = await _listener.AcceptTcpClientAsync();
-                    OnClientConnected(this, new SocksClientArgs(client));
-                    HandshakeTask(client);
-                }
-                catch (Exception e)
-                {
-                    OnError(this, new SocksErrorArgs(client, e));
+        #region Authentication Methods
 
-                    if (client != null)
-                    {
-                        client.Dispose();
-                        OnClientDisconnected(this, new SocksClientArgs(client));
-                    }
-                }
-            }
+        private bool AuthenticateByUsernamePassword(NetworkStream clientStream)
+        {
+            var clientCredentials = SocksServerHelpers.GetClientCredentials(clientStream);
+            return (clientCredentials.Username == Username) && (clientCredentials.Password == Password);
         }
+
+        #endregion
+
+        #region Private Methods
 
         private Task WaitClientsTask()
         {
             return Task.Run(() => WaitClients());
         }
 
+        private async void WaitClients()
+        {
+            while (IsRunning)
+                try
+                {
+                    var client = await _listener.AcceptTcpClientAsync();
+
+                    var handshakeTask = HandshakeTask(client)
+                        .ContinueWith(task => HandshakeEnded(task, client));
+                }
+                catch (Exception e)
+                {
+                    OnServerError(this, new SocksServerErrorArgs(e));
+                }
+        }
+
         private Task HandshakeTask(TcpClient client)
         {
-             return Task.Run(() => Handshake(client));
+            return Task.Run(() => Handshake(client));
         }
 
         private void Handshake(TcpClient client)
@@ -87,8 +90,14 @@ namespace SocksGateway.Socks
 
             if (!authenticated)
                 throw new Exception("Authentication error.");
+        }
 
-            OnClientAuthorized(this, new SocksClientArgs(client));
+        private void HandshakeEnded(Task handshakeTask, TcpClient client)
+        {
+            if (handshakeTask.IsFaulted)
+                OnHandshakeError(this, new SocksErrorArgs(client, handshakeTask.Exception));
+            else
+                OnClientAuthorized(this, new SocksClientArgs(client));
         }
 
         private bool AuthenticateClient(NetworkStream clientStream, AuthMethod authMethod)
@@ -115,14 +124,6 @@ namespace SocksGateway.Socks
 
             SocksServerHelpers.SendAuthResult(clientStream, valid);
             return valid;
-        }
-
-        #region Authentication Methods
-
-        private bool AuthenticateByUsernamePassword(NetworkStream clientStream)
-        {
-            var clientCredentials = SocksServerHelpers.GetClientCredentials(clientStream);
-            return (clientCredentials.Username == Username) && (clientCredentials.Password == Password);
         }
 
         #endregion

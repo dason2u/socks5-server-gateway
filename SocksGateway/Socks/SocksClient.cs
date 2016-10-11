@@ -10,19 +10,17 @@ namespace SocksGateway.Socks
         private readonly TcpClient _client;
         private NetworkStream _clientStream;
 
-        public ClientCredentials ClientCredentials { get; set; }
-
         public SocksClient()
         {
             _client = new TcpClient();
         }
 
-        public void Connect(string host, int port)
+        public void Connect(string host, int port, ClientCredentials credentials = null)
         {
             _client.Connect(host, port);
             _clientStream = _client.GetStream();
 
-            Handshake();
+            Handshake(credentials);
         }
 
         public void Disconnect()
@@ -30,25 +28,21 @@ namespace SocksGateway.Socks
             _client.Client.Disconnect(true);
         }
 
-        private void Handshake()
-        {
-            Authentication();
-            SocksClientHelpers.SendRequest(_clientStream, "www.google.com", 80);
+        #region Private Methods
 
-            var data = _clientStream.ReadDataChunk();
-        }
-
-        private void Authentication()
+        private void Handshake(ClientCredentials credentials)
         {
-            if (ClientCredentials == null)
+            if (credentials == null)
             {
                 SocksClientHelpers.SendAuthMethod(_clientStream, AuthMethod.NoAuth);
             }
             else
             {
                 SocksClientHelpers.SendAuthMethod(_clientStream, AuthMethod.UsernamePassword);
-                SocksClientHelpers.SendAuthCredentials(_clientStream, ClientCredentials);
+                SocksClientHelpers.SendAuthCredentials(_clientStream, credentials);
             }
         }
+
+        #endregion
     }
 }

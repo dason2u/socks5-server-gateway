@@ -24,7 +24,7 @@ namespace SocksGateway.Socks.Helpers
 
             var authMethod = (AuthMethod) clientResponse[2];
 
-            if (!Enum.IsDefined(typeof (AuthMethod), authMethod) || authMethod == AuthMethod.NotSupported)
+            if (!Enum.IsDefined(typeof(AuthMethod), authMethod) || (authMethod == AuthMethod.NotSupported))
                 throw new Exception("Authentication method is not supported.");
 
             return authMethod;

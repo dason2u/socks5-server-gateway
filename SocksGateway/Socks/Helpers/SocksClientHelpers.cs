@@ -27,7 +27,7 @@ namespace SocksGateway.Socks.Helpers
             var serverResponse = clientStream.ReadDataChunk(2);
             var serverAuthMethod = serverResponse[1];
 
-            if (serverAuthMethod != (byte) authMethod || serverAuthMethod == (byte) AuthMethod.NotSupported)
+            if ((serverAuthMethod != (byte) authMethod) || (serverAuthMethod == (byte) AuthMethod.NotSupported))
                 throw new Exception("Authentication method not supported.");
         }
 
@@ -48,7 +48,7 @@ namespace SocksGateway.Socks.Helpers
             * 2 - Result (0x00 - success)
             */
             var serverResponse = clientStream.ReadDataChunk(2);
-            if(serverResponse[1] != 0)
+            if (serverResponse[1] != 0)
                 throw new Exception("Authentication error");
         }
 
@@ -67,7 +67,7 @@ namespace SocksGateway.Socks.Helpers
             var credentialsPackage = new List<byte>
             {
                 0x01,
-                (byte)usernameBytes.Length
+                (byte) usernameBytes.Length
             };
 
             credentialsPackage.AddRange(usernameBytes);
