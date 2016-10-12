@@ -21,8 +21,8 @@ namespace SocksGateway.Socks
         public string Username { get; set; }
         public string Password { get; set; }
         public event EventHandler<SocksServerErrorArgs> OnServerError = delegate { };
-        public event EventHandler<SocksErrorArgs> OnHandshakeError = delegate { };
-        public event EventHandler<SocksClientArgs> OnClientAuthorized = delegate { };
+        public event EventHandler<SocksClientErrorArgs> OnClientHandshakeError = delegate { };
+        public event EventHandler<SocksClientArgs> OnClientHandshaked = delegate { };
 
         public void Start()
         {
@@ -67,8 +67,10 @@ namespace SocksGateway.Socks
                 {
                     var client = await _listener.AcceptTcpClientAsync();
 
-                    var handshakeTask = HandshakeTask(client)
+#pragma warning disable 4014
+                    HandshakeTask(client)
                         .ContinueWith(task => HandshakeEnded(task, client));
+#pragma warning restore 4014
                 }
                 catch (Exception e)
                 {
@@ -95,9 +97,9 @@ namespace SocksGateway.Socks
         private void HandshakeEnded(Task handshakeTask, TcpClient client)
         {
             if (handshakeTask.IsFaulted)
-                OnHandshakeError(this, new SocksErrorArgs(client, handshakeTask.Exception));
+                OnClientHandshakeError(this, new SocksClientErrorArgs(client, handshakeTask.Exception));
             else
-                OnClientAuthorized(this, new SocksClientArgs(client));
+                OnClientHandshaked(this, new SocksClientArgs(client));
         }
 
         private bool AuthenticateClient(NetworkStream clientStream, AuthMethod authMethod)
@@ -112,8 +114,7 @@ namespace SocksGateway.Socks
             switch (authMethod)
             {
                 case AuthMethod.NoAuth:
-                    valid = true;
-                    break;
+                    return true;
                 case AuthMethod.UsernamePassword:
                     valid = AuthenticateByUsernamePassword(clientStream);
                     break;

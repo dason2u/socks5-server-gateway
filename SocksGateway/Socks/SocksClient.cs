@@ -28,6 +28,11 @@ namespace SocksGateway.Socks
             _client.Client.Disconnect(true);
         }
 
+        public byte[] SendRequest(string host, int port, byte[] requestData)
+        {
+            return SocksClientHelpers.SendRequest(_clientStream, host, port, requestData);
+        }
+
         #region Private Methods
 
         private void Handshake(ClientCredentials credentials)

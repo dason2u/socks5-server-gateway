@@ -3,9 +3,9 @@ using System.Net.Sockets;
 
 namespace SocksGateway.Socks.Events
 {
-    public class SocksErrorArgs : EventArgs
+    public class SocksClientErrorArgs : EventArgs
     {
-        public SocksErrorArgs(TcpClient client, Exception exception)
+        public SocksClientErrorArgs(TcpClient client, Exception exception)
         {
             if (exception == null)
                 throw new ArgumentNullException(nameof(exception));

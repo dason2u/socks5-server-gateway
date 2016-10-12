@@ -58,12 +58,14 @@
     <Compile Include="Socks\Enums\AuthMethod.cs" />
     <Compile Include="Socks\Enums\ProtocolVersion.cs" />
     <Compile Include="Socks\Events\SocksClientArgs.cs" />
-    <Compile Include="Socks\Events\SocksErrorArgs.cs" />
+    <Compile Include="Socks\Events\SocksClientErrorArgs.cs" />
     <Compile Include="Socks\Events\SocksServerErrorArgs.cs" />
+    <Compile Include="Socks\Helpers\SocksHelpers.cs" />
     <Compile Include="Socks\Helpers\SocksClientHelpers.cs" />
     <Compile Include="Socks\SocksClient.cs" />
     <Compile Include="Socks\SocksServer.cs" />
     <Compile Include="Socks\Helpers\SocksServerHelpers.cs" />
+    <Compile Include="Socks\SocksTunnel.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

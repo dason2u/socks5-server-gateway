@@ -2,7 +2,6 @@
 using System.Net.Sockets;
 using SocksGateway.Socks;
 using SocksGateway.Socks.Events;
-using SocksGateway.Socks.Helpers;
 
 namespace SocksGateway
 {
@@ -10,62 +9,43 @@ namespace SocksGateway
     {
         private static void Main(string[] args)
         {
-            RunSocksServer(true);
-            //ClientRequest("127.0.0.1", 1080);
+            RunSocksServer();
 
             Console.ReadKey();
         }
 
-        #region Socks Client
-
-        private static void ClientRequest(string host, int port)
+        private static void OpenSocksTunnel(TcpClient client)
         {
-            var socksClient = new SocksClient();
-            //socksClient.ClientCredentials = new ClientCredentials { Username = "admin", Password = "admin"};
-            //socksClient.Connect(host, port);
+            var socksTunnel = new SocksTunnel(client);
+            socksTunnel.Open("108.61.164.110", 36982);
         }
 
-        #endregion
-
-        private void Communicate(TcpClient client)
+        private static void RunSocksServer()
         {
-            var clientRequestInfo = SocksServerHelpers.GetClientRequestInfo(client.GetStream());
-            var proxyClient = new SocksClient();
-
-            proxyClient.Connect(clientRequestInfo.Address, clientRequestInfo.Port);
-            //proxyClient.
-        }
-
-        #region Socks Gateway
-
-        private static void RunSocksServer(bool isProtected)
-        {
-            var server = new SocksServer
+            var socksServer = new SocksServer(Configuration.ServerPort)
             {
-                Username = "admin",
-                Password = "admin",
-                IsSecured = isProtected
+                Username = Configuration.ServerUsername,
+                Password = Configuration.ServerPassword,
+                IsSecured = Configuration.ServerIsSecured
             };
+            socksServer.OnServerError += OnServerError;
+            socksServer.OnClientHandshaked += OnClientHandshaked;
+            socksServer.OnClientHandshakeError += OnClientHandshakeError;
 
-            server.OnClientAuthorized += OnSocksClientAuthorized;
-            server.OnServerError += OnSocksServerError;
-            server.OnHandshakeError += OnHandshakeError;
-
-            server.Start();
+            socksServer.Start();
         }
 
-        private static void OnSocksClientAuthorized(object sender, SocksClientArgs e)
+        private static void OnClientHandshaked(object sender, SocksClientArgs e)
+        {
+            OpenSocksTunnel(e.Client);
+        }
+
+        private static void OnClientHandshakeError(object sender, SocksClientErrorArgs e)
         {
         }
 
-        private static void OnSocksServerError(object sender, SocksServerErrorArgs e)
+        private static void OnServerError(object sender, SocksServerErrorArgs e)
         {
         }
-
-        private static void OnHandshakeError(object sender, SocksErrorArgs e)
-        {
-        }
-
-        #endregion
     }
 }
