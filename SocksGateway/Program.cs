@@ -2,6 +2,7 @@
 using System.Net.Sockets;
 using SocksGateway.Socks;
 using SocksGateway.Socks.Events;
+using SocksGateway.Socks.Helpers;
 
 namespace SocksGateway
 {
@@ -14,12 +15,6 @@ namespace SocksGateway
             Console.ReadKey();
         }
 
-        private static void OpenSocksTunnel(TcpClient client)
-        {
-            var socksTunnel = new SocksTunnel(client);
-            socksTunnel.Open("108.61.164.110", 36982);
-        }
-
         private static void RunSocksServer()
         {
             var socksServer = new SocksServer(Configuration.ServerPort)
@@ -29,23 +24,35 @@ namespace SocksGateway
                 IsSecured = Configuration.ServerIsSecured
             };
             socksServer.OnServerError += OnServerError;
-            socksServer.OnClientHandshaked += OnClientHandshaked;
+            socksServer.OnHandshakeComplete += OnHandshakeComplete;
             socksServer.OnClientHandshakeError += OnClientHandshakeError;
 
             socksServer.Start();
         }
 
-        private static void OnClientHandshaked(object sender, SocksClientArgs e)
+        private static void OpenSocksTunnel(TcpClient client)
         {
+           SocksTunnel.PassDataViaTunnel(client);
+        }
+
+        #region Socks Server Events
+
+        private static void OnHandshakeComplete(object sender, SocksClientArgs e)
+        {
+            Console.WriteLine($"Handshaking complete: {e.Client.Client.RemoteEndPoint}.");
             OpenSocksTunnel(e.Client);
         }
 
         private static void OnClientHandshakeError(object sender, SocksClientErrorArgs e)
         {
+            Console.WriteLine(e.Exception.Message);
         }
 
         private static void OnServerError(object sender, SocksServerErrorArgs e)
         {
+            Console.WriteLine(e.Exception.Message);
         }
+
+        #endregion
     }
 }

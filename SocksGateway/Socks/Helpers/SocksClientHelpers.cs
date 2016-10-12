@@ -52,7 +52,7 @@ namespace SocksGateway.Socks.Helpers
                 throw new Exception("Authentication error");
         }
 
-        public static byte[] SendRequest(NetworkStream clientStream, string host, int port, byte[] data)
+        public static void SendRequestDetails(NetworkStream clientStream, string host, int port)
         {
             /* Send request attempt (unknown length)
             * 1 - Version
@@ -67,9 +67,6 @@ namespace SocksGateway.Socks.Helpers
             var serverResponse = clientStream.ReadDataChunk(requestPackage.Length);
             if (serverResponse[1] != 0x00)
                 throw new Exception("Request error.");
-
-            clientStream.WriteAllData(data);
-            return clientStream.ReadDataChunk(65536);
         }
 
         #region Private Methods

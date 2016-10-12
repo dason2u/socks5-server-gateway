@@ -1,4 +1,5 @@
-﻿using System.Net.Sockets;
+﻿using System;
+using System.Net.Sockets;
 using SocksGateway.Models;
 using SocksGateway.Socks.Enums;
 using SocksGateway.Socks.Helpers;
@@ -10,27 +11,42 @@ namespace SocksGateway.Socks
         private readonly TcpClient _client;
         private NetworkStream _clientStream;
 
-        public SocksClient()
+        public string Address { get; set; }
+        public int Port { get; set; }
+        public ClientCredentials Credentials { get; set; }
+        public bool Connected => _client.Connected;
+            
+        public SocksClient(string address, int port, ClientCredentials credentials = null)
         {
+            if (string.IsNullOrEmpty(address))
+                throw new ArgumentException("Value cannot be null or empty.", nameof(address));
+
+            Address = address;
+            Port = port;
+            Credentials = credentials;
             _client = new TcpClient();
         }
 
-        public void Connect(string host, int port, ClientCredentials credentials = null)
+        public void Connect(string host, int port)
         {
-            _client.Connect(host, port);
+            if(_client.Connected)
+                return;
+
+            _client.Connect(Address, Port);
             _clientStream = _client.GetStream();
 
-            Handshake(credentials);
+            Handshake(Credentials);
+            SocksClientHelpers.SendRequestDetails(_clientStream, host, port);
         }
 
-        public void Disconnect()
+        public void Send(byte[] data)
         {
-            _client.Client.Disconnect(true);
+            _clientStream.WriteAllData(data);
         }
 
-        public byte[] SendRequest(string host, int port, byte[] requestData)
+        public byte[] Read(int bufferSize = 65536)
         {
-            return SocksClientHelpers.SendRequest(_clientStream, host, port, requestData);
+            return _clientStream.ReadDataChunk(bufferSize);
         }
 
         #region Private Methods

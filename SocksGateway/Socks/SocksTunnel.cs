@@ -1,25 +1,26 @@
 ﻿using System;
 using System.Net.Sockets;
-using SocksGateway.Models;
+using SocksGateway.Socks.Helpers;
 
 namespace SocksGateway.Socks
 {
     public class SocksTunnel
     {
-        public SocksTunnel(TcpClient client)
+        public static void PassDataViaTunnel(TcpClient client)
         {
-            if (client == null)
-                throw new ArgumentNullException(nameof(client));
+            var clientStream = client.GetStream();
 
-            Client = client;
-        }
+            var clientRequestInfo = SocksTunnelHelpers.GetClientRequestInfo(clientStream);
+            var proxyClient = new SocksClient("104.238.177.229", 40946);
+            proxyClient.Connect(clientRequestInfo.Address, clientRequestInfo.Port);
 
-        public TcpClient Client { get; private set; }
+            SocksTunnelHelpers.SendConnectResult(clientStream, true, clientRequestInfo.OriginalRequest);
 
-        public void Open(string host, int port, ClientCredentials credentials = null)
-        {
-            var remoteClient = new SocksClient();
-            remoteClient.Connect(host, port, credentials);
+            var clientData = clientStream.ReadDataChunk(65536);
+            proxyClient.Send(clientData);
+
+            var proxyClientResponse = proxyClient.Read();
+            clientStream.WriteAllData(proxyClientResponse);
         }
     }
 }

@@ -8,7 +8,7 @@ using SocksGateway.Socks.Enums;
 
 namespace SocksGateway.Socks.Helpers
 {
-    public static class SocksHelpers
+    public static class SocksTunnelHelpers
     {
         public static SocksRequestInfo GetClientRequestInfo(NetworkStream clientStream)
         {
@@ -28,11 +28,32 @@ namespace SocksGateway.Socks.Helpers
             return ParseHostInfo(clientResponse);
         }
 
+        public static void SendConnectResult(NetworkStream clientStream, bool success, byte[] originalConnectBytes)
+        {
+            /* Server connection result
+             * 1 - Version
+             * 2 - Reply (0x00 - success, 0xFF - error)
+             * 3 - Address type
+             * 4 - Address
+             * 5 - Port
+             */
+            if (success)
+            {
+                originalConnectBytes[1] = 0x00;
+            }
+            else
+            {
+                originalConnectBytes[1] = 0xFF;
+            }
+
+            clientStream.WriteAllData(originalConnectBytes);
+        }
+
         #region Private Methods
 
         private static SocksRequestInfo ParseHostInfo(byte[] clientResponse)
         {
-            var addressType = (AddressType) clientResponse[3];
+            var addressType = (AddressType)clientResponse[3];
 
             string address;
             switch (addressType)
@@ -50,10 +71,10 @@ namespace SocksGateway.Socks.Helpers
             }
 
             //Little endian byte port to int
-            var portBuffer = new[] {clientResponse.Last(), clientResponse[clientResponse.Length - 2]};
+            var portBuffer = new[] { clientResponse.Last(), clientResponse[clientResponse.Length - 2] };
             var port = BitConverter.ToUInt16(portBuffer, 0);
 
-            return new SocksRequestInfo {Address = address, Port = port, OriginalRequest = clientResponse};
+            return new SocksRequestInfo { Address = address, Port = port, OriginalRequest = clientResponse };
         }
 
         #endregion

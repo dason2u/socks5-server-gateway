@@ -22,7 +22,7 @@ namespace SocksGateway.Socks
         public string Password { get; set; }
         public event EventHandler<SocksServerErrorArgs> OnServerError = delegate { };
         public event EventHandler<SocksClientErrorArgs> OnClientHandshakeError = delegate { };
-        public event EventHandler<SocksClientArgs> OnClientHandshaked = delegate { };
+        public event EventHandler<SocksClientArgs> OnHandshakeComplete = delegate { };
 
         public void Start()
         {
@@ -99,7 +99,7 @@ namespace SocksGateway.Socks
             if (handshakeTask.IsFaulted)
                 OnClientHandshakeError(this, new SocksClientErrorArgs(client, handshakeTask.Exception));
             else
-                OnClientHandshaked(this, new SocksClientArgs(client));
+                OnHandshakeComplete(this, new SocksClientArgs(client));
         }
 
         private bool AuthenticateClient(NetworkStream clientStream, AuthMethod authMethod)
